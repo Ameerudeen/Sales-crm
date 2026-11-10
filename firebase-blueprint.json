@@ -1,0 +1,240 @@
+{
+  "entities": {
+    "Account": {
+      "title": "Account",
+      "description": "Represents a company or organization in the CRM.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "industries": { "type": "array", "items": { "type": "string" } },
+        "industry": { "type": "string" },
+        "address": {
+          "type": "object",
+          "properties": {
+            "flatHouseNo": { "type": "string" },
+            "street": { "type": "string" },
+            "city": { "type": "string" },
+            "pinCode": { "type": "string" },
+            "country": { "type": "string" }
+          }
+        },
+        "phones": { "type": "array", "items": { "type": "string" } },
+        "phone": { "type": "string" },
+        "telephone": { "type": "string" },
+        "emails": { "type": "array", "items": { "type": "string" } },
+        "email": { "type": "string" },
+        "website": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "uid": { "type": "string", "description": "The user ID of the owner." }
+      },
+      "required": ["name", "industries", "uid"]
+    },
+    "Contact": {
+      "title": "Contact",
+      "description": "Represents a person associated with an account.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "accountId": { "type": "string" },
+        "salutation": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "designation": { "type": "string" },
+        "department": { "type": "string" },
+        "emails": { "type": "array", "items": { "type": "string" } },
+        "email": { "type": "string" },
+        "secondaryEmail": { "type": "string" },
+        "phones": { "type": "array", "items": { "type": "string" } },
+        "phone": { "type": "string" },
+        "telephone": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "uid": { "type": "string", "description": "The user ID of the owner." }
+      },
+      "required": ["accountId", "firstName", "lastName", "uid"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Represents a potential customer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "salutation": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "accountName": { "type": "string" },
+        "designation": { "type": "string" },
+        "department": { "type": "string" },
+        "emails": { "type": "array", "items": { "type": "string" } },
+        "email": { "type": "string" },
+        "secondaryEmail": { "type": "string" },
+        "phones": { "type": "array", "items": { "type": "string" } },
+        "phone": { "type": "string" },
+        "telephone": { "type": "string" },
+        "industry": { "type": "string" },
+        "website": { "type": "string" },
+        "city": { "type": "string" },
+        "country": { "type": "string" },
+        "status": { "type": "string", "enum": ["New", "Contacted", "Qualified", "Converted"] },
+        "createdAt": { "type": "string" },
+        "uid": { "type": "string", "description": "The user ID of the owner." }
+      },
+      "required": ["firstName", "lastName", "accountName", "status", "uid"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "A scheduled task or reminder.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "notes": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "uid": { "type": "string", "description": "The user ID of the owner." }
+      },
+      "required": ["title", "date", "time", "uid"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "A meeting note or general note.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "scribbleData": { "type": "string" },
+        "accountId": { "type": "string" },
+        "contactId": { "type": "string" },
+        "leadId": { "type": "string" },
+        "location": { "type": "string" },
+        "date": { "type": "string" },
+        "reminderId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "uid": { "type": "string", "description": "The user ID of the owner." }
+      },
+      "required": ["title", "date", "uid"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Extended profile information for the user.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "salutation": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "organizationName": { "type": "string" },
+        "designation": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "theme": { "type": "string", "enum": ["light", "dark"] },
+        "geminiApiKey": { "type": "string" },
+        "googleMapsApiKey": { "type": "string" }
+      },
+      "required": ["uid", "firstName", "lastName", "organizationName"]
+    },
+    "MarketInsight": {
+      "title": "MarketInsight",
+      "description": "Represents a favorited market insight or prospect.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectName": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string" },
+        "category": { "type": "string" },
+        "contractor": { "type": "string" },
+        "consultant": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "tenderLink": { "type": "string" },
+        "description": { "type": "string" },
+        "relevance": { "type": "string" },
+        "scope": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "dateFound": { "type": "string" },
+        "type": { "type": "string", "enum": ["project", "prospect"] },
+        "isFavorite": { "type": "boolean" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["projectName", "location", "type", "uid"]
+    },
+    "IndustriesMetadata": {
+      "title": "IndustriesMetadata",
+      "description": "Global list of available industries.",
+      "type": "object",
+      "properties": {
+        "list": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["list"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "Represents a user action in the CRM for history and undo.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["create", "update", "delete", "restore", "merge"] },
+        "entityType": { "type": "string", "enum": ["lead", "contact", "account", "visit", "note", "reminder"] },
+        "entityId": { "type": "string" },
+        "description": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "data": { "type": "object" },
+        "previousData": { "type": "object" },
+        "uid": { "type": "string" }
+      },
+      "required": ["id", "type", "entityType", "entityId", "description", "timestamp", "uid"]
+    }
+  },
+  "firestore": {
+    "/metadata/industries": {
+      "schema": "IndustriesMetadata",
+      "description": "Global industries list."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/accounts/{accountId}": {
+      "schema": "Account",
+      "description": "Collection of accounts."
+    },
+    "/contacts/{contactId}": {
+      "schema": "Contact",
+      "description": "Collection of contacts."
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Collection of leads."
+    },
+    "/reminders/{reminderId}": {
+      "schema": "Reminder",
+      "description": "Collection of reminders."
+    },
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Collection of notes."
+    },
+    "/favoriteInsights/{insightId}": {
+      "schema": "MarketInsight",
+      "description": "Collection of favorited market insights."
+    },
+    "/marketInsights/{insightId}": {
+      "schema": "MarketInsight",
+      "description": "Collection of all discovered market insights."
+    },
+    "/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Collection of user activities for history."
+    }
+  }
+}

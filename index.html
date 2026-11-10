@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      // Shim process.env for the browser
+      window.process = { env: { NODE_ENV: 'development' } };
+      
+      // Global Error Handler - Move to top for best coverage
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.error('Global Error caught:', message, 'at', source, ':', lineno, ':', colno);
+        
+        // Ensure root exists but is empty as a heuristic for white screen
+        const root = document.getElementById('root');
+        if (root && root.innerHTML === '') {
+           const debugDiv = document.createElement('div');
+           debugDiv.id = 'crash-overlay';
+           debugDiv.style.position = 'fixed';
+           debugDiv.style.inset = '0';
+           debugDiv.style.background = '#f8fafc';
+           debugDiv.style.display = 'flex';
+           debugDiv.style.alignItems = 'center';
+           debugDiv.style.justifyContent = 'center';
+           debugDiv.style.padding = '20px';
+           debugDiv.style.zIndex = '99999';
+           
+           debugDiv.innerHTML = `
+             <div style="background: white; padding: 40px; border-radius: 32px; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.1); max-width: 450px; text-align: center; border: 1px solid #e2e8f0; font-family: system-ui, sans-serif;">
+               <div style="width: 72px; height: 72px; background: #fee2e2; color: #ef4444; border-radius: 20px; display: flex; alignItems: center; justify-content: center; margin: 0 auto 24px;">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+               </div>
+               <h1 style="font-size: 24px; font-weight: 900; color: #0f172a; margin: 0 0 12px; letter-spacing: -0.025em; text-transform: uppercase;">Startup Failed</h1>
+               <p style="font-size: 14px; font-weight: 500; color: #64748b; line-height: 1.6; margin-bottom: 32px;">The application encountered a critical error during initialization. This is usually due to malformed local data or a connection issue.</p>
+               <div style="background: #f1f5f9; padding: 16px; border-radius: 16px; font-family: monospace; font-size: 12px; color: #475569; text-align: left; margin-bottom: 32px; overflow-wrap: break-word;">
+                 <strong>Error:</strong> ${message}
+               </div>
+               <button onclick="localStorage.clear(); window.location.reload();" style="width: 100%; background: #2563eb; color: white; border: none; padding: 16px; border-radius: 16px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;">Clear Data & Reset</button>
+             </div>
+           `;
+           document.body.appendChild(debugDiv);
+        }
+      };
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sales Perks CRM</title>
+    <meta name="description" content="A CRM for Sales Engineers with customer contacts, project tracking, and location-based customer discovery." />
+    <meta property="og:title" content="Sales Perks CRM" />
+    <meta property="og:description" content="A CRM for Sales Engineers with customer contacts, project tracking, and location-based customer discovery." />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#4f46e5" />
+    <link rel="apple-touch-icon" href="https://picsum.photos/seed/sales/192/192" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          if ('caches' in window) {
+            caches.keys().then(names => {
+              names.forEach(name => {
+                if (name !== 'sales-perk-v5') {
+                  caches.delete(name);
+                }
+              });
+            });
+          }
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            registration.update();
+            console.log('SW registered: ', registration);
+          }).catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
+

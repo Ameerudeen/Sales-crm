@@ -1,0 +1,320 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (Firebase Auth UID)
+    // Fields: uid, salutation, firstName, lastName, organizationName, designation, phone, email, createdAt, theme
+    //
+    // Collection: accounts
+    // Document ID: accountId
+    // Fields: id, name, industries, industry, address, phones, phone, telephone, emails, email, website, lat, lng, createdAt, uid
+    //
+    // Collection: contacts
+    // Document ID: contactId
+    // Fields: id, accountId, salutation, firstName, lastName, designation, department, emails, email, secondaryEmail, phones, phone, telephone, createdAt, uid
+    //
+    // Collection: leads
+    // Document ID: leadId
+    // Fields: id, salutation, firstName, lastName, accountName, designation, department, emails, email, secondaryEmail, phones, phone, telephone, industry, website, city, country, status, createdAt, uid
+    //
+    // Collection: reminders
+    // Document ID: reminderId
+    // Fields: id, title, notes, date, time, completed, createdAt, uid
+    //
+    // Collection: notes
+    // Document ID: noteId
+    // Fields: id, title, content, scribbleData, accountId, contactId, leadId, location, date, reminderId, createdAt, uid
+    //
+    // Collection: favoriteInsights
+    // Document ID: insightId
+    // Fields: id, projectName, location, status, category, contractor, consultant, contactPerson, contactPhone, contactEmail, tenderLink, description, relevance, scope, lat, lng, dateFound, type, isFavorite, uid, createdAt
+    //
+    // Collection: marketInsights
+    // Document ID: insightId
+    // Fields: (Same as favoriteInsights)
+    //
+    // Collection: visits
+    // Document ID: visitId
+    // Fields: id, targetId, targetType, targetName, date, time, status, notes, meetingNotes, uid, createdAt
+    //
+    // Collection: activities
+    // Document ID: activityId
+    // Fields: id, type, entityType, entityId, description, timestamp, data, previousData, uid
+    //
+    // Collection: ignored_duplicates
+    // Document ID: uid_itemId
+    // Fields: uid, itemId, type, ignoredAt
+    //
+    // Collection: metadata
+    // Document ID: industries
+    // Fields: list (array of strings)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin') || 
+          (request.auth.token.get('email', '') == "udeen3197@gmail.com") ||
+          (request.auth.token.get('email', '') == "ameerudeen1123@gmail.com") ||
+          (request.auth.token.get('email', '').lower() == "udeen3197@gmail.com") ||
+          (request.auth.token.get('email', '').lower() == "ameerudeen1123@gmail.com")
+        );
+    }
+
+    function isActive() {
+      return isAuthenticated() && 
+             (
+               !exists(/databases/$(database)/documents/users/$(request.auth.uid)) || 
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status', 'active') == 'active' ||
+               isAdmin()
+             );
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\.]+$');
+    }
+
+    function isValidString(field, min, max) {
+      return request.resource.data[field] is string && 
+             request.resource.data[field].size() >= min && 
+             request.resource.data[field].size() <= max;
+    }
+
+    function isValidOptionalString(field, max) {
+      return !(field in request.resource.data) || 
+             (request.resource.data[field] is string && request.resource.data[field].size() <= max);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUserProfile(data) {
+      return hasRequiredFields(['uid', 'firstName', 'lastName', 'organizationName']) &&
+             (data.uid == request.auth.uid || isAdmin()) &&
+             data.firstName is string && data.firstName.size() > 0 &&
+             data.lastName is string && data.lastName.size() > 0 &&
+             data.organizationName is string && data.organizationName.size() > 0 &&
+             (!('status' in data) || data.status in ['active', 'inactive']) &&
+             (!('role' in data) || data.role in ['admin', 'user']) &&
+             (!('accountType' in data) || data.accountType in ['classic', 'pro']);
+    }
+
+    function isValidAccount(data) {
+      return hasRequiredFields(['name', 'industries', 'uid']) &&
+             (data.uid == request.auth.uid || isAdmin()) &&
+             data.name is string && data.name.size() > 0 &&
+             data.industries is list;
+    }
+
+    function isValidContact(data) {
+      return hasRequiredFields(['accountId', 'firstName', 'lastName', 'uid']) &&
+             data.uid == request.auth.uid &&
+             data.accountId is string &&
+             data.firstName is string &&
+             data.lastName is string;
+    }
+
+    function isValidLead(data) {
+      return hasRequiredFields(['firstName', 'lastName', 'accountName', 'status', 'uid']) &&
+             data.uid == request.auth.uid &&
+             data.firstName is string &&
+             data.lastName is string &&
+             data.accountName is string &&
+             isValidOptionalString('industry', 100) &&
+             isValidOptionalString('website', 200) &&
+             data.status in ['New', 'Contacted', 'Qualified', 'Converted'];
+    }
+
+    function isValidReminder(data) {
+      return hasRequiredFields(['title', 'date', 'time', 'uid']) &&
+             data.uid == request.auth.uid &&
+             data.title is string &&
+             data.date is string &&
+             data.time is string;
+    }
+
+    function isValidNote(data) {
+      return hasRequiredFields(['title', 'date', 'uid']) &&
+             data.uid == request.auth.uid &&
+             data.title is string &&
+             data.date is string;
+    }
+
+    function isValidMarketInsight(data) {
+      return hasRequiredFields(['projectName', 'location', 'type', 'uid']) &&
+             data.uid == request.auth.uid &&
+             data.projectName is string &&
+             data.location is string &&
+             data.type in ['project', 'prospect'];
+    }
+
+    function isValidVisit(data) {
+      return hasRequiredFields(['targetId', 'targetType', 'targetName', 'date', 'time', 'status', 'uid']) &&
+             data.uid == request.auth.uid &&
+             data.targetType in ['account', 'lead', 'prospect'] &&
+             data.status in ['Planned', 'Visited', 'Postponed', 'Cancelled'];
+    }
+
+    function isValidActivity(data) {
+      return hasRequiredFields(['id', 'type', 'entityType', 'entityId', 'description', 'timestamp', 'uid']) &&
+             (data.uid == request.auth.uid || isAdmin()) &&
+             data.type is string &&
+             data.entityType is string;
+    }
+
+    function isValidIgnoredDuplicate(data) {
+      return hasRequiredFields(['uid', 'itemId', 'type', 'ignoredAt']) &&
+             data.uid == request.auth.uid &&
+             data.itemId is string &&
+             data.type in ['accounts', 'contacts', 'leads'] &&
+             data.ignoredAt is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow list: if isOwner(userId) || isAdmin();
+      allow create: if (isOwner(userId) || isAdmin()) && isValidId(userId) && isValidUserProfile(request.resource.data);
+      allow update: if isValidId(userId) && ((isOwner(userId) && isValidUserProfile(request.resource.data) &&
+                        (resource.data.role == request.resource.data.get('role', 'user') && 
+                         resource.data.get('status', 'active') == request.resource.data.get('status', 'active')))
+                    || isAdmin());
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    match /accounts/{accountId} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(accountId);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && (isValidAccount(request.resource.data) || isAdmin());
+      allow update: if isValidId(accountId) && ((isActive() && isDocOwner() && isValidAccount(request.resource.data)) || isAdmin());
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(accountId);
+    }
+
+    match /contacts/{contactId} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(contactId);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && (isValidContact(request.resource.data) || isAdmin());
+      allow update: if isValidId(contactId) && ((isActive() && isDocOwner() && isValidContact(request.resource.data)) || isAdmin());
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(contactId);
+    }
+
+    match /leads/{leadId} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(leadId);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && (isValidLead(request.resource.data) || isAdmin());
+      allow update: if isValidId(leadId) && ((isActive() && isDocOwner() && isValidLead(request.resource.data)) || isAdmin());
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(leadId);
+    }
+
+    match /reminders/{reminderId} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(reminderId);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && (isValidReminder(request.resource.data) || isAdmin());
+      allow update: if isValidId(reminderId) && ((isActive() && isDocOwner() && isValidReminder(request.resource.data)) || isAdmin());
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(reminderId);
+    }
+
+    match /notes/{noteId} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(noteId);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && (isValidNote(request.resource.data) || isAdmin());
+      allow update: if isValidId(noteId) && ((isActive() && isDocOwner() && isValidNote(request.resource.data)) || isAdmin());
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(noteId);
+    }
+
+    match /favoriteInsights/{insightId} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(insightId);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && isValidMarketInsight(request.resource.data);
+      allow update: if isValidId(insightId) && isActive() && isDocOwner() && isValidMarketInsight(request.resource.data);
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(insightId);
+    }
+
+    match /marketInsights/{insightId} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(insightId);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && isValidMarketInsight(request.resource.data);
+      allow update: if isValidId(insightId) && isActive() && isDocOwner() && isValidMarketInsight(request.resource.data);
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(insightId);
+    }
+
+    match /visits/{visitId} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(visitId);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && isValidVisit(request.resource.data);
+      allow update: if isValidId(visitId) && isActive() && isDocOwner() && isValidVisit(request.resource.data);
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(visitId);
+    }
+
+    match /activities/{activityId} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(activityId);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && isValidActivity(request.resource.data);
+      allow update: if false; // Activities should be immutable
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(activityId);
+    }
+
+    match /ignored_duplicates/{id} {
+      allow get: if (isDocOwner() || isAdmin()) && isValidId(id);
+      allow list: if isDocOwner() || isAdmin();
+      allow create: if isActive() && isValidIgnoredDuplicate(request.resource.data);
+      allow update: if false; // Ignored items shouldn't change
+      allow delete: if (isDocOwner() || isAdmin()) && isValidId(id);
+    }
+
+    match /metadata/industries {
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /invitations/{inviteId} {
+      allow get: if isAuthenticated() && isValidId(inviteId);
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin() && isValidId(inviteId);
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

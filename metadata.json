@@ -1,0 +1,6 @@
+{
+  "name": "Sales Perks CRM",
+  "description": "A CRM for Sales Engineers with customer contacts, project tracking, and location-based customer discovery.",
+  "requestFramePermissions": ["geolocation", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
